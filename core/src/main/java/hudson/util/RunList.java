@@ -135,6 +135,9 @@ public class RunList<R extends Run> extends AbstractList<R> {
     @Deprecated
     public int size() {
         if (size == null) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new RunListInterruptedException();
+            }
             int sz = 0;
             R oldest = null;
             for (R r : this) {
@@ -143,6 +146,9 @@ public class RunList<R extends Run> extends AbstractList<R> {
                 }
                 oldest = r;
                 sz++;
+            }
+            if (Thread.currentThread().isInterrupted()) {
+                throw new RunListInterruptedException();
             }
             first = oldest;
             size = sz;
