@@ -113,7 +113,7 @@ public class InstallUncaughtExceptionHandler {
         if (!"HEAD".equals(req.getMethod())) {
             String message = "Resource-intensive request interrupted before a complete result could be produced.";
             if (jsonApi) {
-                rsp.getWriter().write("{\\"status\\":\\"error\\",\\"message\\":\\"" + message + "\\"}");
+                rsp.getWriter().write("{\"status\":\"error\",\"message\":\"" + message + "\"}");
             } else {
                 rsp.getWriter().write(message);
             }
