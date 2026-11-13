@@ -8,6 +8,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -83,12 +87,36 @@ public class InstallUncaughtExceptionHandler {
         if (rsp.isCommitted()) {
             return;
         }
-        rsp.resetBuffer();
-        rsp.setHeader("Content-Length", null);
+
+        // Preserve headers installed by filters (for example, security headers), but discard
+        // the incomplete response body and any length calculated for it.
+        Map<String, List<String>> headers = new LinkedHashMap<>();
+        for (String name : rsp.getHeaderNames()) {
+            if (!"Content-Length".equalsIgnoreCase(name)) {
+                headers.put(name, new ArrayList<>(rsp.getHeaders(name)));
+            }
+        }
+        // reset(), unlike resetBuffer(), also clears the writer/output-stream selection.
+        rsp.reset();
+        headers.forEach((name, values) -> {
+            if (!values.isEmpty()) {
+                rsp.setHeader(name, values.get(0));
+                for (int i = 1; i < values.size(); i++) {
+                    rsp.addHeader(name, values.get(i));
+                }
+            }
+        });
+
         rsp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        rsp.setContentType("text/plain;charset=UTF-8");
+        boolean jsonApi = req.getRequestURI() != null && req.getRequestURI().endsWith("/api/json");
+        rsp.setContentType(jsonApi ? "application/json;charset=UTF-8" : "text/plain;charset=UTF-8");
         if (!"HEAD".equals(req.getMethod())) {
-            rsp.getWriter().write("Resource-intensive request interrupted before a complete result could be produced.");
+            String message = "Resource-intensive request interrupted before a complete result could be produced.";
+            if (jsonApi) {
+                rsp.getWriter().write("{\\"status\\":\\"error\\",\\"message\\":\\"" + message + "\\"}");
+            } else {
+                rsp.getWriter().write(message);
+            }
         }
     }
 
