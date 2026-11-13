@@ -90,6 +90,34 @@ class RunListTest {
         assertEquals(0, runs.size());
     }
 
+    @Test
+    void sizeChecksInterruptionAfterFinalElementIsRejected() {
+        Run newest = mock(Run.class);
+        Run oldest = mock(Run.class);
+        AtomicInteger visited = new AtomicInteger();
+        RunList<Run> runList = RunList.fromRuns(List.of(newest, oldest)).filter((Predicate<Run>) run -> {
+            if (visited.incrementAndGet() == 2) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+            return true;
+        });
+
+        try {
+            assertThrows(RunListInterruptedException.class, runList::size);
+            assertTrue(Thread.currentThread().isInterrupted());
+            assertNull(runList.getCachedFirstBuild());
+        } finally {
+            Thread.interrupted();
+        }
+
+        assertEquals(2, runList.size());
+        assertSame(oldest, runList.getCachedFirstBuild());
+        assertEquals(4, visited.get());
+        assertEquals(2, runList.size());
+        assertEquals(4, visited.get());
+    }
+
     // RunList for byTimestamp tests
     private RunList rlist;
 
