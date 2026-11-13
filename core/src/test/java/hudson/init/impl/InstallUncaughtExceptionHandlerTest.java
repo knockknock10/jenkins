@@ -92,7 +92,7 @@ class InstallUncaughtExceptionHandlerTest {
         verify(rsp, never()).setHeader("Content-Length", "123");
         verify(rsp).setStatus(503);
         verify(rsp).setContentType("application/json;charset=UTF-8");
-        assertEquals("{\\"status\\":\\"error\\",\\"message\\":\\"Resource-intensive request interrupted before a complete result could be produced.\\"}", body.toString());
+        assertEquals("{\"status\":\"error\",\"message\":\"Resource-intensive request interrupted before a complete result could be produced.\"}", body.toString());
     }
 
     @Test
