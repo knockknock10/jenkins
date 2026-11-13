@@ -75,8 +75,15 @@ class ApiTest {
             for (String flavor : List.of("json", "xml", "python")) {
                 WebResponse response = wc.goTo("interruptedBuildHistory/api/" + flavor + "?tree=allBuilds[number]" + range, null).getWebResponse();
                 assertEquals(503, response.getStatusCode());
-                assertEquals("text/plain", response.getContentType());
-                assertEquals("Resource-intensive request interrupted before a complete result could be produced.", response.getContentAsString());
+                if ("json".equals(flavor)) {
+                    assertEquals("application/json", response.getContentType());
+                    JSONObject error = JSONObject.fromObject(response.getContentAsString());
+                    assertEquals("error", error.getString("status"));
+                    assertEquals("Resource-intensive request interrupted before a complete result could be produced.", error.getString("message"));
+                } else {
+                    assertEquals("text/plain", response.getContentType());
+                    assertEquals("Resource-intensive request interrupted before a complete result could be produced.", response.getContentAsString());
+                }
             }
         }
         assertEquals(200, wc.goTo("api/json?tree=nodeName", "application/json").getWebResponse().getStatusCode());
