@@ -47,7 +47,7 @@ public interface InterruptibleIterable<T> extends Iterable<T> {
 
     /**
      * Passes a scan's interruption check to iterables that support it.
-     * Other iterables retain their ordinary iterator behavior.
+     * Other iterables are wrapped so the check runs before and after each iterator operation.
      */
     static <T> Iterator<T> iterator(Iterable<T> source, Runnable checkInterrupted) {
         if (source instanceof InterruptibleIterable<T> interruptible) {
