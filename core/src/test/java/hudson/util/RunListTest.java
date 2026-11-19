@@ -180,9 +180,9 @@ class RunListTest {
                 assertEquals(1, visited.get());
                 assertNull(inner.getCachedFirstBuild());
                 assertNull(outer.getCachedFirstBuild());
-                // Ordinary iteration has its own context, even on an interrupted thread.
-                assertFalse(outer.iterator().hasNext());
-                assertEquals(4, visited.get());
+                // Ordinary RunList traversal also observes the interrupted thread.
+                assertThrows(RunListInterruptedException.class, () -> outer.iterator().hasNext());
+                assertEquals(1, visited.get());
             } finally {
                 Thread.interrupted();
             }
@@ -205,35 +205,13 @@ class RunListTest {
     }
 
     @Test
-    void ordinaryIterationDoesNotCheckInterruption() {
+    void ordinaryIterationChecksInterruption() {
         Run run = mock(Run.class);
-        RunList<Run> runs = RunList.fromRuns(List.of(run)).filter((Predicate<Run>) candidate -> true);
-        assertEquals(1, runs.size());
+        RunList<Run> runs = RunList.fromRuns(List.of(run));
         try {
             Thread.currentThread().interrupt();
-            assertSame(run, runs.iterator().next());
+            assertThrows(RunListInterruptedException.class, () -> runs.iterator().next());
             assertTrue(Thread.currentThread().isInterrupted());
-        } finally {
-            Thread.interrupted();
-        }
-    }
-
-    @Test
-    void sizeDoesNotMakeUnrelatedIterationInterruptible() {
-        Run run = mock(Run.class);
-        RunList<Run> unrelated = RunList.fromRuns(List.of(run)).filter((Predicate<Run>) candidate -> true);
-        AtomicInteger visited = new AtomicInteger();
-        RunList<Run> runs = RunList.fromRuns(List.of(run)).filter((Predicate<Run>) candidate -> {
-            Thread.currentThread().interrupt();
-            assertSame(run, unrelated.iterator().next());
-            visited.incrementAndGet();
-            return false;
-        });
-        try {
-            assertThrows(RunListInterruptedException.class, runs::size);
-            assertEquals(1, visited.get());
-            assertTrue(Thread.currentThread().isInterrupted());
-            assertNull(runs.getCachedFirstBuild());
         } finally {
             Thread.interrupted();
         }

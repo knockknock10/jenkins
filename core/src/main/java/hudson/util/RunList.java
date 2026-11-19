@@ -132,9 +132,14 @@ public class RunList<R extends Run> extends AbstractList<R> implements AlwaysIte
         base = c;
     }
 
+    /**
+     * Returns an iterator that stops when the calling thread is interrupted.
+     *
+     * @throws RunListInterruptedException if the current thread is interrupted during traversal
+     */
     @Override
     public Iterator<R> iterator() {
-        return base.iterator();
+        return InterruptibleIterable.iterator(base, RunList::checkInterrupted);
     }
 
     @Restricted(NoExternalUse.class)
