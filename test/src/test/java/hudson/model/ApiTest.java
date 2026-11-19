@@ -129,12 +129,16 @@ class ApiTest {
         @Exported(name = "allBuilds")
         public RunList<Run> getBuilds() {
             AtomicInteger visited = new AtomicInteger();
-            return RunList.fromRuns(List.of(mock(Run.class), mock(Run.class))).filter((Predicate<Run>) run -> {
+            RunList<Run> builds = RunList.fromRuns(List.of(mock(Run.class), mock(Run.class))).filter((Predicate<Run>) run -> {
                 if (visited.incrementAndGet() == 2) {
                     Thread.currentThread().interrupt();
                 }
                 return true;
             });
+            // AlwaysIterate range exports use iterator(), not size(). Exercise the size() cancellation
+            // path here explicitly while verifying that Stapler turns it into an HTTP 503.
+            builds.size();
+            return builds;
         }
     }
 

@@ -282,6 +282,57 @@ class RunListTest {
     }
 
     @Test
+    void sizeStopsInsideInheritedIteratorSubclass() {
+        AtomicInteger visited = new AtomicInteger();
+        Run run = mock(Run.class);
+        RunList<Run> inner = RunList.fromRuns(List.of(run, run, run)).filter((Predicate<Run>) candidate -> {
+            visited.incrementAndGet();
+            Thread.currentThread().interrupt();
+            return false;
+        });
+        Job job = mock(Job.class);
+        when(job.getBuilds()).thenReturn(inner);
+        RunList<Run> subclass = new RunList<>(job) {};
+        try {
+            assertThrows(RunListInterruptedException.class, subclass::size);
+            assertTrue(Thread.currentThread().isInterrupted());
+            assertEquals(1, visited.get());
+            assertNull(subclass.getCachedFirstBuild());
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
+    void sizeChecksWhileInitializingEmptyMergedRunLists() {
+        AtomicInteger iteratorRequests = new AtomicInteger();
+        RunList<Run> empty = new RunList<>() {
+            @Override
+            public Iterator<Run> iterator() {
+                if (iteratorRequests.incrementAndGet() == 1) {
+                    Thread.currentThread().interrupt();
+                }
+                return Collections.emptyIterator();
+            }
+        };
+        List<Job> jobs = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            Job job = mock(Job.class);
+            when(job.getBuilds()).thenReturn(empty);
+            jobs.add(job);
+        }
+        RunList<Run> merged = new RunList<>(jobs);
+        try {
+            assertThrows(RunListInterruptedException.class, merged::size);
+            assertTrue(Thread.currentThread().isInterrupted());
+            assertEquals(1, iteratorRequests.get());
+            assertNull(merged.getCachedFirstBuild());
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
     void emptySize() {
         List<Run> runs = new RunList<>();
         assertEquals(0, runs.size());

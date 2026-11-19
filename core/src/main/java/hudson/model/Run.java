@@ -47,6 +47,7 @@ import hudson.FeedAdapter;
 import hudson.Functions;
 import hudson.Util;
 import hudson.XmlFile;
+import hudson.util.RunListInterruptedException;
 import hudson.cli.declarative.CLIMethod;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleLogFilter;
@@ -384,6 +385,9 @@ public abstract class Run<JobT extends Job<JobT, RunT>, RunT extends Run<JobT, R
             if (a instanceof RunAction2) {
                 try {
                     ((RunAction2) a).onLoad(this);
+                } catch (RunListInterruptedException x) {
+                    // Cancellation is not evidence that the action is corrupt.
+                    throw x;
                 } catch (RuntimeException x) {
                     LOGGER.log(WARNING, "failed to load " + a + " from " + getDataFile(), x);
                     removeAction(a); // if possible; might be in an inconsistent state
